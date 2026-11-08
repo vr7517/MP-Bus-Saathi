@@ -50,3 +50,4 @@ MP-Bus-Saathi/
 
 ### Initial Setup
 Detailed setup instructions for the backend and mobile client are documented in [`docs/architecture.md`](file:///data/Projects/MP-Bus-Saathi/docs/architecture.md).
+

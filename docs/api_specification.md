@@ -178,3 +178,4 @@ Passengers verify bus arrival, delays, or schedule discrepancies at a bus stop.
   "message": "Verification recorded. Thank you for helping your fellow passengers!"
 }
 ```
+

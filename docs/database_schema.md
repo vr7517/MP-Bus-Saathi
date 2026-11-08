@@ -161,3 +161,4 @@ CREATE TABLE community_verifications (
 
 CREATE INDEX idx_verifications_schedule ON community_verifications(schedule_id, verified_at);
 ```
+

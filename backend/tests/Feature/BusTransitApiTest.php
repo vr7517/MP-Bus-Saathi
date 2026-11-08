@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Bus;
 use App\Models\BusStop;
+use App\Models\CommunityVerification;
 use App\Models\Route;
 use App\Models\Schedule;
 use Database\Seeders\MPTransitSeeder;
@@ -35,6 +36,20 @@ class BusTransitApiTest extends TestCase
             ->assertJsonPath('data.0.name_hi', 'नादरा बस स्टैंड');
     }
 
+    public function test_nearby_bus_stops_proximity_search(): void
+    {
+        // Coordinates near Nadra Bus Stand (Bhopal)
+        $response = $this->getJson('/api/v1/stops?lat=23.2640&lng=77.4120&radius_km=15');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('status', 'success');
+
+        $data = $response->json('data');
+        $this->assertNotEmpty($data);
+        $this->assertEquals('Nadra Bus Stand', $data[0]['name_en']);
+        $this->assertLessThan(1.0, $data[0]['distance_km']);
+    }
+
     public function test_can_search_source_to_destination_direct_route(): void
     {
         $bhopalStop = BusStop::where('name_en', 'Nadra Bus Stand')->first();
@@ -46,6 +61,46 @@ class BusTransitApiTest extends TestCase
             ->assertJsonPath('status', 'success')
             ->assertJsonCount(1, 'data.direct_routes')
             ->assertJsonPath('data.direct_routes.0.route_code', 'BPL-IND-EXP-01');
+    }
+
+    public function test_route_search_validation_fails_on_same_source_and_destination(): void
+    {
+        $bhopalStop = BusStop::where('name_en', 'Nadra Bus Stand')->first();
+
+        $response = $this->getJson("/api/v1/routes/search?source_stop_id={$bhopalStop->id}&destination_stop_id={$bhopalStop->id}");
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['destination_stop_id']);
+    }
+
+    public function test_can_get_ordered_route_stops(): void
+    {
+        $route = Route::where('route_code', 'BPL-IND-EXP-01')->first();
+
+        $response = $this->getJson("/api/v1/routes/{$route->id}/stops");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('route_code', 'BPL-IND-EXP-01');
+
+        $stops = $response->json('stops');
+        $this->assertCount(6, $stops);
+        $this->assertEquals(1, $stops[0]['stop_sequence']);
+        $this->assertEquals(6, $stops[5]['stop_sequence']);
+    }
+
+    public function test_can_get_route_schedules(): void
+    {
+        $route = Route::where('route_code', 'BPL-IND-EXP-01')->first();
+
+        $response = $this->getJson("/api/v1/schedules/route/{$route->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('status', 'success');
+
+        $schedules = $response->json('data');
+        $this->assertCount(3, $schedules);
+        $this->assertEquals('07:00:00', $schedules[0]['departure_time']);
     }
 
     public function test_live_bus_status_reports_correct_gps_health(): void
@@ -88,12 +143,27 @@ class BusTransitApiTest extends TestCase
         ]);
     }
 
-    public function test_can_submit_community_verification(): void
+    public function test_telemetry_validation_fails_for_invalid_coordinates(): void
+    {
+        $bus = Bus::first();
+
+        $response = $this->postJson('/api/v1/telemetry/ping', [
+            'bus_id' => $bus->id,
+            'latitude' => 105.000, // Invalid lat > 90
+            'longitude' => 77.0900,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['latitude']);
+    }
+
+    public function test_can_submit_community_verification_and_check_geofence(): void
     {
         $schedule = Schedule::first();
         $stop = BusStop::first();
 
-        $response = $this->postJson('/api/v1/community/verify', [
+        // On-site verification (matching coordinates)
+        $responseOnSite = $this->postJson('/api/v1/community/verify', [
             'schedule_id' => $schedule->id,
             'bus_stop_id' => $stop->id,
             'device_hash' => 'test-device-uuid-12345',
@@ -103,9 +173,48 @@ class BusTransitApiTest extends TestCase
             'user_longitude' => $stop->longitude,
         ]);
 
-        $response->assertStatus(201)
+        $responseOnSite->assertStatus(201)
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.verified_on_site', true);
+
+        // Distant verification (coordinates 60km away)
+        $responseDistant = $this->postJson('/api/v1/community/verify', [
+            'schedule_id' => $schedule->id,
+            'bus_stop_id' => $stop->id,
+            'device_hash' => 'test-device-uuid-remote',
+            'report_type' => 'delayed',
+            'delay_minutes' => 15,
+            'user_latitude' => $stop->latitude + 0.6,
+            'user_longitude' => $stop->longitude + 0.6,
+        ]);
+
+        $responseDistant->assertStatus(201)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.verified_on_site', false);
+    }
+
+    public function test_can_fetch_recent_community_verifications_for_schedule(): void
+    {
+        $schedule = Schedule::first();
+        $stop = BusStop::first();
+
+        CommunityVerification::create([
+            'schedule_id' => $schedule->id,
+            'bus_stop_id' => $stop->id,
+            'device_hash' => 'dummy-hash',
+            'report_type' => 'delayed',
+            'delay_minutes' => 10,
+            'notes' => 'Heavy traffic near toll gate',
+            'is_approved' => true,
+        ]);
+
+        $response = $this->getJson("/api/v1/community/schedule/{$schedule->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.report_type', 'delayed')
+            ->assertJsonPath('data.0.delay_minutes', 10);
     }
 
     public function test_offline_sync_snapshot_returns_required_transit_data(): void
@@ -127,4 +236,3 @@ class BusTransitApiTest extends TestCase
             ]);
     }
 }
-

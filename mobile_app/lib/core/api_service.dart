@@ -6,8 +6,8 @@ import '../models/route_item.dart';
 import 'offline_service.dart';
 
 class ApiService {
-  // Configurable URL: 10.0.2.2 points to host machine from Android Emulator; localhost for desktop/web
-  static String baseUrl = 'http://10.0.2.2:8000/api/v1';
+  // Default to 127.0.0.1:8000 (accessible on physical device via adb reverse tcp:8000 tcp:8000)
+  static String baseUrl = 'http://127.0.0.1:8000/api/v1';
 
   static void setBaseUrl(String url) {
     baseUrl = url;

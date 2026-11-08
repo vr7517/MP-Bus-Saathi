@@ -313,26 +313,32 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1B4B),
-                        borderRadius: BorderRadius.circular(6),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1B4B),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          route.routeCode,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
                       ),
-                      child: Text(
-                        route.routeCode,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          '${route.travelDistanceKm} km • ~${route.estimatedDurationMinutes} ${_isHindi ? 'मिनट' : 'mins'}',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${route.travelDistanceKm} km • ~${route.estimatedDurationMinutes} ${_isHindi ? 'मिनट' : 'mins'}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 6),
                 Text(
                   '${route.stopsInSegment} ${_isHindi ? 'स्टॉप' : 'stops'}',
                   style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
@@ -408,9 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  isLive
-                                      ? (_isHindi ? 'GPS Live (लाइव)' : 'GPS Live')
-                                      : (_isHindi ? 'GPS Unavailable (अनुपलब्ध)' : 'GPS Unavailable'),
+                                  isLive ? 'GPS Live' : 'GPS Unavailable',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,

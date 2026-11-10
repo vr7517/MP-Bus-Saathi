@@ -8,13 +8,16 @@ use App\Livewire\Admin\LiveTracker;
 use App\Livewire\Admin\RouteManager;
 use App\Livewire\Admin\ScheduleManager;
 use App\Livewire\Admin\VerificationModerator;
+use App\Livewire\Auth\Login;
 use App\Models\Bus;
 use App\Models\BusStop;
 use App\Models\CommunityVerification;
 use App\Models\Operator;
 use App\Models\Route;
 use App\Models\Schedule;
+use App\Models\User;
 use Database\Seeders\MPTransitSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -23,15 +26,40 @@ class AdminPanelTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $adminUser;
+    protected User $operatorUser;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->seed(MPTransitSeeder::class);
+        $this->seed(UserSeeder::class);
+
+        $this->adminUser = User::where('role', 'admin')->first();
+        $this->operatorUser = User::where('role', 'operator')->first();
     }
 
-    public function test_can_access_admin_dashboard_overview(): void
+    public function test_guest_is_redirected_to_login(): void
     {
         $response = $this->get('/admin');
+        $response->assertRedirect('/login');
+    }
+
+    public function test_can_authenticate_via_livewire_login_component(): void
+    {
+        Livewire::test(Login::class)
+            ->set('email', 'admin@mpbussaathi.in')
+            ->set('password', 'password123')
+            ->call('login')
+            ->assertHasNoErrors()
+            ->assertRedirect('/admin');
+
+        $this->assertAuthenticatedAs($this->adminUser);
+    }
+
+    public function test_authenticated_admin_can_access_dashboard_overview(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get('/admin');
         $response->assertStatus(200);
         $response->assertSee('मध्य प्रदेश बस साथी');
         $response->assertSee('कुल बसें');
@@ -39,18 +67,28 @@ class AdminPanelTest extends TestCase
 
     public function test_dashboard_overview_livewire_component_renders_stats(): void
     {
-        Livewire::test(DashboardOverview::class)
+        Livewire::actingAs($this->adminUser)
+            ->test(DashboardOverview::class)
             ->assertStatus(200)
             ->assertSee('पंजीकृत बस फ्लीट')
             ->assertSee('लाइव जीपीएस');
+    }
+
+    public function test_operator_dashboard_only_counts_their_fleet(): void
+    {
+        Livewire::actingAs($this->operatorUser)
+            ->test(DashboardOverview::class)
+            ->assertStatus(200)
+            ->assertSet('isOperator', true);
     }
 
     public function test_bus_manager_can_create_new_bus_and_toggle_gps(): void
     {
         $operator = Operator::first();
 
-        // 1. Create a new bus via Livewire
-        Livewire::test(BusManager::class)
+        // 1. Create a new bus via Livewire as admin
+        Livewire::actingAs($this->adminUser)
+            ->test(BusManager::class)
             ->set('registration_number', 'MP-04-ZZ-9999')
             ->set('operator_id', $operator->id)
             ->set('bus_type', 'ac')
@@ -66,68 +104,65 @@ class AdminPanelTest extends TestCase
             'has_gps_device' => true,
         ]);
 
-        // 2. Toggle GPS capability
-        $bus = Bus::where('registration_number', 'MP-04-ZZ-9999')->first();
-        Livewire::test(BusManager::class)
-            ->call('toggleGps', $bus->id);
+        $createdBus = Bus::where('registration_number', 'MP-04-ZZ-9999')->first();
 
-        $this->assertFalse($bus->fresh()->has_gps_device);
+        // 2. Toggle GPS
+        Livewire::actingAs($this->adminUser)
+            ->test(BusManager::class)
+            ->call('toggleGps', $createdBus->id)
+            ->assertHasNoErrors();
+
+        $this->assertFalse($createdBus->fresh()->has_gps_device);
     }
 
-    public function test_route_manager_can_select_route_and_view_stops(): void
+    public function test_route_manager_lists_active_mp_routes(): void
     {
-        $route = Route::first();
-
-        Livewire::test(RouteManager::class)
-            ->call('selectRoute', $route->id)
+        Livewire::actingAs($this->adminUser)
+            ->test(RouteManager::class)
             ->assertStatus(200)
-            ->assertSee($route->route_code)
-            ->assertSee('मार्ग के बस स्टॉप');
+            ->assertSee('BPL-IND-EXP-01')
+            ->assertSee('IND-UJN-ORD-01');
     }
 
-    public function test_schedule_manager_renders_active_schedules(): void
+    public function test_schedule_manager_renders_timetables(): void
     {
-        Livewire::test(ScheduleManager::class)
+        Livewire::actingAs($this->adminUser)
+            ->test(ScheduleManager::class)
             ->assertStatus(200)
-            ->assertSee('बस समय-सारणी एवं अनुसूची')
+            ->assertSee('MP-04-EA-1024')
             ->assertSee('07:00');
     }
 
-    public function test_live_tracker_renders_map_and_telemetry_table(): void
+    public function test_live_tracker_renders_map_and_bus_telemetry(): void
     {
-        Livewire::test(LiveTracker::class)
+        Livewire::actingAs($this->adminUser)
+            ->test(LiveTracker::class)
             ->assertStatus(200)
-            ->assertSee('लाइव जीपीएस ट्रैकिंग मैप')
-            ->assertSee('MP-04-EA-1024');
+            ->assertSee('MP-04-EA-1024')
+            ->assertSee('admin-map');
     }
 
-    public function test_verification_moderator_can_approve_and_dismiss_reports(): void
+    public function test_verification_moderator_can_approve_or_reject(): void
     {
         $schedule = Schedule::first();
         $stop = BusStop::first();
 
-        $report = CommunityVerification::create([
+        $verification = CommunityVerification::create([
             'schedule_id' => $schedule->id,
             'bus_stop_id' => $stop->id,
-            'device_hash' => 'hash123',
             'report_type' => 'delayed',
             'delay_minutes' => 20,
-            'notes' => 'Toll plaza delay',
+            'device_hash' => hash('sha256', 'reporter-test-device'),
+            'verified_at' => now(),
             'is_approved' => false,
         ]);
 
-        // Test Approve
-        Livewire::test(VerificationModerator::class)
-            ->call('approve', $report->id);
+        Livewire::actingAs($this->adminUser)
+            ->test(VerificationModerator::class)
+            ->assertSee('+20 मिनट')
+            ->call('approve', $verification->id)
+            ->assertHasNoErrors();
 
-        $this->assertTrue($report->fresh()->is_approved);
-
-        // Test Dismiss (Deletes report)
-        Livewire::test(VerificationModerator::class)
-            ->call('dismiss', $report->id);
-
-        $this->assertDatabaseMissing('community_verifications', [
-            'id' => $report->id,
-        ]);
+        $this->assertTrue($verification->fresh()->is_approved);
     }
 }

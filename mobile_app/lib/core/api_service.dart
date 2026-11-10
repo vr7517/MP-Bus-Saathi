@@ -108,6 +108,38 @@ class ApiService {
     }
   }
 
+  /// Emit driver/conductor GPS telemetry ping to backend
+  static Future<bool> sendTelemetry({
+    required int busId,
+    required double latitude,
+    required double longitude,
+    required double speedKmh,
+    required double heading,
+    int? activeScheduleId,
+  }) async {
+    try {
+      final body = {
+        'bus_id': busId,
+        'latitude': latitude,
+        'longitude': longitude,
+        'speed_kmh': speedKmh,
+        'heading': heading,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+        'active_schedule_id': activeScheduleId,
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/telemetry/ping'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 4));
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Offline local route generator when internet is unavailable
   static List<RouteSearchResult> _generateOfflineFallbackRoutes(int sourceId, int destId) {
     return [

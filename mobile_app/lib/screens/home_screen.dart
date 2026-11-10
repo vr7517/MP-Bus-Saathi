@@ -3,6 +3,7 @@ import '../core/api_service.dart';
 import '../core/offline_service.dart';
 import '../models/bus_stop.dart';
 import '../models/route_item.dart';
+import 'driver_mode_screen.dart';
 import 'live_map_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -96,6 +97,19 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
         actions: [
+          // Driver / Conductor Mode Button
+          IconButton(
+            tooltip: _isHindi ? 'चालक / परिचालक मोड' : 'Driver / Conductor Mode',
+            icon: const Icon(Icons.drive_eta, color: Colors.white, size: 20),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DriverModeScreen(isHindi: _isHindi),
+                ),
+              );
+            },
+          ),
           // Language Switcher Toggle
           TextButton.icon(
             onPressed: () => setState(() => _isHindi = !_isHindi),

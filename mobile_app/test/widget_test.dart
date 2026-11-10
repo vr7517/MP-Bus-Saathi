@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mp_bus_saathi/main.dart';
+import 'package:mp_bus_saathi/screens/driver_mode_screen.dart';
 import 'package:mp_bus_saathi/screens/language_select_screen.dart';
 import 'package:mp_bus_saathi/screens/verification_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -57,5 +58,18 @@ void main() {
     expect(find.text('देरी'), findsOneWidget);
     expect(find.text('रद्द'), findsOneWidget);
     expect(find.text('सबमिट करें (Submit)'), findsOneWidget);
+  });
+
+  testWidgets('Driver mode screen renders bus selector and toggle button', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: DriverModeScreen(isHindi: true),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('चालक / परिचालक मोड'), findsOneWidget);
+    expect(find.text('⚪ ट्रैकिंग बंद'), findsOneWidget);
+    expect(find.text('लाइव ट्रैकिंग शुरू करें (Start Live Tracking)'), findsOneWidget);
   });
 }

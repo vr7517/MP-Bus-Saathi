@@ -27,12 +27,28 @@
                 </div>
             </div>
             <div class="flex items-center space-x-4">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                    🟢 Live System
-                </span>
-                <span class="text-xs bg-indigo-800 px-3 py-1 rounded-md text-indigo-100">
-                    Madhya Pradesh
-                </span>
+                @auth
+                    <div class="text-right hidden sm:block">
+                        <div class="text-sm font-semibold flex items-center justify-end space-x-1.5">
+                            @if(auth()->user()->isAdmin())
+                                <span class="bg-amber-400 text-amber-950 text-[10px] font-bold px-2 py-0.5 rounded-full">👑 एडमिन</span>
+                            @else
+                                <span class="bg-indigo-700 text-indigo-100 text-[10px] font-bold px-2 py-0.5 rounded-full">🏢 ऑपरेटर</span>
+                            @endif
+                            <span>{{ auth()->user()->name }}</span>
+                        </div>
+                        <div class="text-[11px] text-indigo-200">{{ auth()->user()->email }}</div>
+                    </div>
+                    <form method="POST" action="/logout">
+                        @csrf
+                        <button type="submit" class="bg-indigo-800 hover:bg-rose-700 text-xs px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition flex items-center space-x-1">
+                            <span>🚪</span>
+                            <span>लॉगआउट</span>
+                        </button>
+                    </form>
+                @else
+                    <a href="/login" class="bg-indigo-600 hover:bg-indigo-500 text-xs px-3 py-1.5 rounded-lg text-white font-medium">लॉगिन</a>
+                @endauth
             </div>
         </div>
     </header>

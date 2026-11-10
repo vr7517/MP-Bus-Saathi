@@ -12,21 +12,39 @@ use Livewire\Component;
 
 class DashboardOverview extends Component
 {
+    public bool $isOperator = false;
+
     public function render()
     {
-        $totalBuses = Bus::count();
+        $user = auth()->user();
+        $this->isOperator = ($user && $user->isOperator() && $user->operator_id !== null);
+
+        $busQuery = Bus::query();
+        if ($this->isOperator) {
+            $busQuery->where('operator_id', $user->operator_id);
+        }
+        $totalBuses = $busQuery->count();
+
         $totalStops = BusStop::count();
         $totalRoutes = Route::count();
 
         $freshThreshold = Carbon::now()->subSeconds(180);
-        $liveGpsBuses = LiveBusTelemetry::where('last_ping_at', '>=', $freshThreshold)->count();
+        $telemetryQuery = LiveBusTelemetry::where('last_ping_at', '>=', $freshThreshold);
+        if ($this->isOperator) {
+            $telemetryQuery->whereHas('bus', fn($b) => $b->where('operator_id', $user->operator_id));
+        }
+        $liveGpsBuses = $telemetryQuery->count();
 
         $recentVerifications = CommunityVerification::with(['busStop', 'schedule.route'])
             ->orderByDesc('verified_at')
             ->limit(5)
             ->get();
 
-        $activeBuses = Bus::with(['operator', 'telemetry'])->get();
+        $activeBusesQuery = Bus::with(['operator', 'telemetry']);
+        if ($this->isOperator) {
+            $activeBusesQuery->where('operator_id', $user->operator_id);
+        }
+        $activeBuses = $activeBusesQuery->get();
 
         return view('livewire.admin.dashboard-overview', [
             'totalBuses' => $totalBuses,
@@ -35,7 +53,7 @@ class DashboardOverview extends Component
             'liveGpsBuses' => $liveGpsBuses,
             'recentVerifications' => $recentVerifications,
             'activeBuses' => $activeBuses,
+            'isOperator' => $this->isOperator,
         ])->layout('components.layouts.app', ['title' => 'डैशबोर्ड - MP Bus Saathi']);
     }
 }
-

@@ -165,4 +165,40 @@ class AdminPanelTest extends TestCase
 
         $this->assertTrue($verification->fresh()->is_approved);
     }
+
+    public function test_data_management_renders_and_imports_stops(): void
+    {
+        \Livewire\Livewire::actingAs($this->adminUser)
+            ->test(\App\Livewire\Admin\DataManagement::class)
+            ->assertStatus(200)
+            ->assertSee('डेटा प्रबंधन एवं कवरेज')
+            ->set('importType', 'stops')
+            ->set('rawJsonData', json_encode([
+                [
+                    'name_hi' => 'बैतूल बस स्टैंड',
+                    'name_en' => 'Betul Bus Stand',
+                    'district' => 'Betul',
+                    'latitude' => 21.9015,
+                    'longitude' => 77.9018,
+                    'is_major_junction' => true,
+                ]
+            ]))
+            ->call('executeImport')
+            ->assertHasNoErrors()
+            ->assertSee('सफलतापूर्वक सहेजे गए');
+
+        $this->assertDatabaseHas('bus_stops', [
+            'name_en' => 'Betul Bus Stand',
+            'district' => 'Betul',
+        ]);
+    }
+
+    public function test_privacy_policy_page_renders_successfully(): void
+    {
+        $response = $this->get('/privacy-policy');
+        $response->assertStatus(200);
+        $response->assertSee('Privacy Policy');
+        $response->assertSee('MP Bus Saathi');
+        $response->assertSee('DPDPA 2023');
+    }
 }

@@ -9,6 +9,10 @@ use App\Http\Controllers\Api\TelemetryController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    // Districts (Statewide MP Geographic Registry)
+    Route::get('/districts', [\App\Http\Controllers\Api\DistrictController::class, 'index']);
+    Route::get('/districts/{id}', [\App\Http\Controllers\Api\DistrictController::class, 'show']);
+
     // Bus Stops
     Route::get('/stops', [BusStopController::class, 'index']);
     Route::get('/stops/{id}', [BusStopController::class, 'show']);

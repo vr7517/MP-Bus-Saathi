@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/bus_stop.dart';
+import '../models/district.dart';
 import '../models/live_status.dart';
 import '../models/route_item.dart';
 import 'offline_service.dart';
@@ -32,6 +33,31 @@ class ApiService {
     }
 
     return await OfflineService.loadStops();
+  }
+
+  /// Fetch all 55 districts of Madhya Pradesh
+  static Future<List<District>> getDistricts() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/districts'))
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List list = data['data'] ?? [];
+        return list.map((item) => District.fromJson(item)).toList();
+      }
+    } catch (_) {}
+
+    return [
+      District(id: 1, nameEn: 'Bhopal', nameHi: 'भोपाल', code: 'BPL', division: 'Bhopal', latitude: 23.2599, longitude: 77.4126),
+      District(id: 2, nameEn: 'Indore', nameHi: 'इंदौर', code: 'IND', division: 'Indore', latitude: 22.7196, longitude: 75.8577),
+      District(id: 3, nameEn: 'Jabalpur', nameHi: 'जबलपुर', code: 'JBL', division: 'Jabalpur', latitude: 23.1815, longitude: 79.9864),
+      District(id: 4, nameEn: 'Gwalior', nameHi: 'ग्वालियर', code: 'GWL', division: 'Gwalior', latitude: 26.2183, longitude: 78.1828),
+      District(id: 5, nameEn: 'Ujjain', nameHi: 'उज्जैन', code: 'UJN', division: 'Ujjain', latitude: 23.1765, longitude: 75.7885),
+      District(id: 6, nameEn: 'Sagar', nameHi: 'सागर', code: 'SGR', division: 'Sagar', latitude: 23.8388, longitude: 78.7378),
+      District(id: 7, nameEn: 'Rewa', nameHi: 'रीवा', code: 'REW', division: 'Rewa', latitude: 24.5362, longitude: 81.3037),
+    ];
   }
 
   /// Search routes between source and destination bus stops.

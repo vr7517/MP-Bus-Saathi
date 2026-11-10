@@ -1,10 +1,34 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mp_bus_saathi/models/bus_stop.dart';
+import 'package:mp_bus_saathi/models/district.dart';
 import 'package:mp_bus_saathi/models/live_status.dart';
 import 'package:mp_bus_saathi/models/route_item.dart';
 
 void main() {
   group('BusTransit Models Unit Tests', () {
+    test('District parses LGD JSON correctly and returns bilingual names', () {
+      final json = {
+        'id': 1,
+        'name_en': 'Bhopal',
+        'name_hi': 'भोपाल',
+        'code': '417',
+        'division': 'Bhopal',
+        'latitude': 23.2599,
+        'longitude': 77.4126,
+      };
+
+      final district = District.fromJson(json);
+
+      expect(district.id, 1);
+      expect(district.nameEn, 'Bhopal');
+      expect(district.nameHi, 'भोपाल');
+      expect(district.code, '417');
+      expect(district.division, 'Bhopal');
+      expect(district.latitude, 23.2599);
+      expect(district.longitude, 77.4126);
+      expect(district.displayName(true), 'भोपाल');
+      expect(district.displayName(false), 'Bhopal');
+    });
     test('BusStop parses JSON correctly and supports bilingual display', () {
       final json = {
         'id': 1,

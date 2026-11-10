@@ -75,6 +75,9 @@
                 <a href="/admin/verifications" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition">
                     🤝 <span class="ml-3">कम्युनिटी सत्यापन (Feedback)</span>
                 </a>
+                <a href="/admin/data-management" class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition">
+                    📁 <span class="ml-3">डेटा प्रबंधन (Data & 55 Districts)</span>
+                </a>
             </nav>
 
             <div class="mt-6 bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-xs text-indigo-900">

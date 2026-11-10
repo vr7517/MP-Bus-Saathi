@@ -2,6 +2,7 @@
 
 use App\Livewire\Admin\BusManager;
 use App\Livewire\Admin\DashboardOverview;
+use App\Livewire\Admin\DataManagement;
 use App\Livewire\Admin\LiveTracker;
 use App\Livewire\Admin\RouteManager;
 use App\Livewire\Admin\ScheduleManager;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect('/admin');
 });
+
+Route::view('/privacy-policy', 'privacy-policy')->name('privacy-policy');
 
 // Authentication
 Route::get('/login', Login::class)->name('login')->middleware('guest');
@@ -32,4 +35,5 @@ Route::prefix('admin')->middleware('auth')->group(function () {
     Route::get('/schedules', ScheduleManager::class)->name('admin.schedules');
     Route::get('/tracking', LiveTracker::class)->name('admin.tracking');
     Route::get('/verifications', VerificationModerator::class)->name('admin.verifications');
+    Route::get('/data-management', DataManagement::class)->name('admin.data-management');
 });

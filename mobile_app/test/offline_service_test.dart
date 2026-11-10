@@ -13,7 +13,9 @@ void main() {
       expect(stops.isNotEmpty, true);
       expect(stops.any((s) => s.nameEn == 'Nadra Bus Stand'), true);
       expect(stops.any((s) => s.nameEn == 'Sarwate Bus Stand, Indore'), true);
-      expect(stops.length, 8);
+      expect(stops.any((s) => s.nameEn == 'Gwalior ISBT (Padav / Thathipur)'), true);
+      expect(stops.any((s) => s.nameEn == 'Jabalpur ISBT (Deendayal Chowk)'), true);
+      expect(stops.length, 16);
     });
 
     test('Saving stops caches them to SharedPreferences and reloads correctly', () async {

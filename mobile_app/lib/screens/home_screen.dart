@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/api_service.dart';
 import '../core/offline_service.dart';
 import '../models/bus_stop.dart';
+import '../models/district.dart';
 import '../models/route_item.dart';
 import 'driver_mode_screen.dart';
 import 'live_map_screen.dart';
@@ -18,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late bool _isHindi;
   List<BusStop> _stops = [];
+  List<District> _districts = [];
+  District? _selectedDistrictFilter;
   BusStop? _sourceStop;
   BusStop? _destinationStop;
   bool _isLoadingStops = true;
@@ -33,12 +36,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final stops = await ApiService.getStops();
-    final syncTime = await OfflineService.getLastSyncTime();
+    final results = await Future.wait([
+      ApiService.getStops(),
+      ApiService.getDistricts(),
+      OfflineService.getLastSyncTime(),
+    ]);
+
+    final stops = results[0] as List<BusStop>;
+    final districts = results[1] as List<District>;
+    final syncTime = results[2] as String?;
 
     if (!mounted) return;
     setState(() {
       _stops = stops;
+      _districts = districts;
       _isLoadingStops = false;
       _lastSyncTime = syncTime;
 
@@ -52,6 +63,23 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_sourceStop != null && _destinationStop != null) {
       _performSearch();
     }
+  }
+
+  List<BusStop> get _displayedStops {
+    if (_selectedDistrictFilter == null) return _stops;
+    final filtered = _stops.where((s) => s.district.toLowerCase() == _selectedDistrictFilter!.nameEn.toLowerCase()).toList();
+    if (filtered.isEmpty) return _stops;
+    final set = Set<BusStop>.from(filtered);
+    if (_sourceStop != null) set.add(_sourceStop!);
+    if (_destinationStop != null) set.add(_destinationStop!);
+    return set.toList();
+  }
+
+  List<District> get _districtsWithStops {
+    if (_districts.isEmpty) return [];
+    final activeDistrictNames = _stops.map((s) => s.district.toLowerCase()).toSet();
+    final withStops = _districts.where((d) => activeDistrictNames.contains(d.nameEn.toLowerCase())).toList();
+    return withStops.isNotEmpty ? withStops : _districts.take(12).toList();
   }
 
   Future<void> _performSearch() async {
@@ -155,6 +183,80 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // District Quick-Filter Chips
+                    if (_districtsWithStops.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.location_city, size: 16, color: Color(0xFF4338CA)),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isHindi ? 'जिला चुनें (Filter District)' : 'Filter by District',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                          ),
+                          const Spacer(),
+                          if (_selectedDistrictFilter != null)
+                            GestureDetector(
+                              onTap: () => setState(() => _selectedDistrictFilter = null),
+                              child: Text(
+                                _isHindi ? 'सभी देखें' : 'Show All',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF4338CA), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            ChoiceChip(
+                              label: Text(_isHindi ? 'सभी जिले' : 'All Districts'),
+                              selected: _selectedDistrictFilter == null,
+                              onSelected: (val) {
+                                if (val) setState(() => _selectedDistrictFilter = null);
+                              },
+                              selectedColor: const Color(0xFF4338CA),
+                              labelStyle: TextStyle(
+                                color: _selectedDistrictFilter == null ? Colors.white : const Color(0xFF1E293B),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            ..._districtsWithStops.map((d) {
+                              final isSelected = _selectedDistrictFilter?.id == d.id;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ChoiceChip(
+                                  label: Text(d.displayName(_isHindi)),
+                                  selected: isSelected,
+                                  onSelected: (val) {
+                                    setState(() {
+                                      _selectedDistrictFilter = val ? d : null;
+                                      if (val) {
+                                        final inDist = _stops.where((s) => s.district.toLowerCase() == d.nameEn.toLowerCase()).toList();
+                                        if (inDist.isNotEmpty && (_sourceStop == null || _sourceStop!.district.toLowerCase() != d.nameEn.toLowerCase())) {
+                                          _sourceStop = inDist.first;
+                                          _performSearch();
+                                        }
+                                      }
+                                    });
+                                  },
+                                  selectedColor: const Color(0xFF4338CA),
+                                  labelStyle: TextStyle(
+                                    color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
 
                     // Search Card
                     Container(
@@ -279,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
           value: value,
           hint: Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
           icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF4338CA)),
-          items: _stops.map((s) {
+          items: _displayedStops.map((s) {
             return DropdownMenuItem<BusStop>(
               value: s,
               child: Row(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +15,6 @@ class MPBusSaathiApp extends StatelessWidget {
     return MaterialApp(
       title: 'मध्य प्रदेश बस साथी (MP Bus Saathi)',
       debugShowCheckedModeBanner: false,
-      // Default to Hindi, with English support
       locale: const Locale('hi', 'IN'),
       supportedLocales: const [
         Locale('hi', 'IN'),
@@ -35,7 +34,7 @@ class MPBusSaathiApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'sans-serif',
       ),
-      home: const HomeScreen(),
+      home: const SplashScreen(),
     );
   }
 }

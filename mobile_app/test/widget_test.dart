@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mp_bus_saathi/main.dart';
+import 'package:mp_bus_saathi/screens/language_select_screen.dart';
 import 'package:mp_bus_saathi/screens/verification_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,24 +10,32 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('App launches in Hindi-first mode and toggles to English', (WidgetTester tester) async {
+  testWidgets('Splash screen displays branding and loader', (WidgetTester tester) async {
     await tester.pumpWidget(const MPBusSaathiApp());
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
 
-    // 1. Verify Hindi Title & Offline Banner by default
+    // Verify Splash branding
     expect(find.text('मध्य प्रदेश बस साथी'), findsOneWidget);
-    expect(find.text('ऑफलाइन फ्रेंडली बस ट्रैकिंग'), findsOneWidget);
-    expect(find.text('English'), findsOneWidget); // Language switch button
+    expect(find.text('MP Bus Saathi • Public Transit Navigator'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    // 2. Tap English toggle
-    await tester.tap(find.text('English'));
+    // Allow splash timer to complete
+    await tester.pump(const Duration(milliseconds: 2000));
+  });
+
+  testWidgets('Language selection screen displays Hindi and English choices', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: LanguageSelectScreen(),
+      ),
+    );
     await tester.pump();
 
-    // 3. Verify English UI renders
-    expect(find.text('MP Bus Saathi'), findsOneWidget);
-    expect(find.text('Offline-Friendly Bus Transit'), findsOneWidget);
-    expect(find.text('हिन्दी'), findsOneWidget); // Button toggled to Hindi
+    expect(find.text('भाषा चुनें / Select Language'), findsOneWidget);
+    expect(find.text('अपनी पसंदीदा भाषा चुनें'), findsOneWidget);
+    expect(find.text('हिन्दी'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('आगे बढ़ें (Continue)'), findsOneWidget);
   });
 
   testWidgets('Verification dialog renders on-time, delay, and cancellation options', (WidgetTester tester) async {

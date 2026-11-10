@@ -6,14 +6,16 @@ import '../models/route_item.dart';
 import 'live_map_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool initialIsHindi;
+
+  const HomeScreen({super.key, this.initialIsHindi = true});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isHindi = true;
+  late bool _isHindi;
   List<BusStop> _stops = [];
   BusStop? _sourceStop;
   BusStop? _destinationStop;
@@ -25,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _isHindi = widget.initialIsHindi;
     _loadInitialData();
   }
 

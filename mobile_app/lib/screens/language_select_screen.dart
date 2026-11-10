@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'home_screen.dart';
+import 'main_navigation_shell.dart';
 
 class LanguageSelectScreen extends StatefulWidget {
   const LanguageSelectScreen({super.key});
@@ -22,7 +22,7 @@ class _LanguageSelectScreenState extends State<LanguageSelectScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => HomeScreen(initialIsHindi: _isHindiSelected),
+        builder: (_) => MainNavigationShell(initialHindi: _isHindiSelected),
       ),
     );
   }

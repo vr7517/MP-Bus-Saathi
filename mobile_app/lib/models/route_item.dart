@@ -1,3 +1,16 @@
+class SearchResultContainer {
+  final List<RouteSearchResult> directRoutes;
+  final List<ConnectingJourney> transferRoutes;
+
+  SearchResultContainer({
+    required this.directRoutes,
+    required this.transferRoutes,
+  });
+
+  bool get isEmpty => directRoutes.isEmpty && transferRoutes.isEmpty;
+  bool get isNotEmpty => !isEmpty;
+}
+
 class RouteSearchResult {
   final int routeId;
   final String routeCode;
@@ -22,14 +35,14 @@ class RouteSearchResult {
   factory RouteSearchResult.fromJson(Map<String, dynamic> json) {
     var schedList = json['schedules'] as List? ?? [];
     return RouteSearchResult(
-      routeId: json['route_id'] as int,
+      routeId: (json['route_id'] as num?)?.toInt() ?? 0,
       routeCode: json['route_code'] ?? '',
       originStop: json['origin_stop'] ?? '',
       finalDestinationStop: json['final_destination_stop'] ?? '',
-      travelDistanceKm: (json['travel_distance_km'] as num).toDouble(),
-      estimatedDurationMinutes: json['estimated_duration_minutes'] as int? ?? 0,
-      stopsInSegment: json['stops_in_segment'] as int? ?? 0,
-      schedules: schedList.map((s) => ScheduleItem.fromJson(s)).toList(),
+      travelDistanceKm: (json['travel_distance_km'] as num?)?.toDouble() ?? 0.0,
+      estimatedDurationMinutes: (json['estimated_duration_minutes'] as num?)?.round() ?? 0,
+      stopsInSegment: (json['stops_in_segment'] as num?)?.round() ?? 0,
+      schedules: schedList.map((s) => ScheduleItem.fromJson(s as Map<String, dynamic>)).toList(),
     );
   }
 }
@@ -59,10 +72,10 @@ class ScheduleItem {
 
   factory ScheduleItem.fromJson(Map<String, dynamic> json) {
     return ScheduleItem(
-      scheduleId: json['schedule_id'] as int,
-      busId: json['bus_id'] as int?,
-      busNumber: json['bus_number'] ?? 'Not Assigned',
-      operatorName: json['operator_name'] ?? 'MP Transit',
+      scheduleId: (json['schedule_id'] as num?)?.toInt() ?? 0,
+      busId: (json['bus_id'] as num?)?.toInt(),
+      busNumber: json['bus_number'] ?? json['registration_number'] ?? 'Not Assigned',
+      operatorName: json['operator_name'] ?? json['operator'] ?? 'MP Transit',
       busType: json['bus_type'] ?? 'ordinary',
       hasGps: json['has_gps'] == true,
       gpsStatus: json['gps_status'] ?? 'unavailable',
@@ -74,3 +87,38 @@ class ScheduleItem {
   bool get isGpsLive => gpsStatus == 'live';
 }
 
+class ConnectingJourney {
+  final String interchangeNameHi;
+  final String interchangeNameEn;
+  final String interchangeDistrict;
+  final RouteSearchResult leg1;
+  final RouteSearchResult leg2;
+  final double totalDistanceKm;
+  final int totalDurationMinutes;
+
+  ConnectingJourney({
+    required this.interchangeNameHi,
+    required this.interchangeNameEn,
+    required this.interchangeDistrict,
+    required this.leg1,
+    required this.leg2,
+    required this.totalDistanceKm,
+    required this.totalDurationMinutes,
+  });
+
+  factory ConnectingJourney.fromJson(Map<String, dynamic> json) {
+    final junction = json['interchange_stop'] as Map<String, dynamic>? ?? {};
+    return ConnectingJourney(
+      interchangeNameHi: junction['name_hi'] ?? '',
+      interchangeNameEn: junction['name_en'] ?? '',
+      interchangeDistrict: junction['district'] ?? '',
+      leg1: RouteSearchResult.fromJson(json['leg_1'] as Map<String, dynamic>? ?? {}),
+      leg2: RouteSearchResult.fromJson(json['leg_2'] as Map<String, dynamic>? ?? {}),
+      totalDistanceKm: (json['total_distance_km'] as num?)?.toDouble() ?? 0.0,
+      totalDurationMinutes: (json['total_estimated_duration_minutes'] as num?)?.round() ?? 0,
+    );
+  }
+
+  String interchangeName(bool isHindi) =>
+      isHindi ? '$interchangeNameHi ($interchangeNameEn)' : '$interchangeNameEn ($interchangeNameHi)';
+}

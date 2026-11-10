@@ -60,26 +60,60 @@ class ApiService {
     ];
   }
 
-  /// Search routes between source and destination bus stops.
-  static Future<List<RouteSearchResult>> searchRoutes(int sourceId, int destId, {String? busType}) async {
+  /// Search journeys returning both direct and 1-transfer connecting routes.
+  static Future<SearchResultContainer> searchJourney(int sourceId, int destId, {String? busType}) async {
     try {
       String url = '$baseUrl/routes/search?source_stop_id=$sourceId&destination_stop_id=$destId';
-      if (busType != null) url += '&bus_type=$busType';
+      if (busType != null && busType.isNotEmpty) url += '&bus_type=$busType';
 
       final response = await http
           .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        final List direct = data['data']?['direct_routes'] ?? [];
-        return direct.map((item) => RouteSearchResult.fromJson(item)).toList();
+        final List directList = data['data']?['direct_routes'] ?? [];
+        final List transferList = data['data']?['transfer_routes'] ?? [];
+
+        final direct = directList.map((item) => RouteSearchResult.fromJson(item as Map<String, dynamic>)).toList();
+        final transfers = transferList.map((item) => ConnectingJourney.fromJson(item as Map<String, dynamic>)).toList();
+
+        return SearchResultContainer(
+          directRoutes: direct,
+          transferRoutes: transfers,
+        );
       }
     } catch (_) {
       // Offline fallback: Generate offline schedule estimate based on stops
     }
 
-    return _generateOfflineFallbackRoutes(sourceId, destId);
+    return SearchResultContainer(
+      directRoutes: _generateOfflineFallbackRoutes(sourceId, destId),
+      transferRoutes: [],
+    );
+  }
+
+  /// Search routes (returns direct routes for backward compatibility)
+  static Future<List<RouteSearchResult>> searchRoutes(int sourceId, int destId, {String? busType}) async {
+    final container = await searchJourney(sourceId, destId, busType: busType);
+    return container.directRoutes;
+  }
+
+  /// Fetch ordered stops and waypoints for a specific route
+  static Future<List<Map<String, dynamic>>> getRouteStops(int routeId) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/routes/$routeId/stops'))
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List stops = data['stops'] ?? [];
+        return stops.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+
+    return [];
   }
 
   /// Retrieve real-time GPS telemetry and status for a bus.
@@ -91,7 +125,9 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        return LiveBusStatus.fromJson(data['data']);
+        if (data['data'] != null) {
+          return LiveBusStatus.fromJson(data['data']);
+        }
       }
     } catch (_) {
       // Fallback: GPS Unavailable
@@ -185,7 +221,7 @@ class ApiService {
             operatorName: 'मध्य प्रदेश राज्य परिवहन (MPSRTS)',
             busType: 'express',
             hasGps: true,
-            gpsStatus: 'unavailable', // Offline mode -> defaults to unavailable scheduled
+            gpsStatus: 'unavailable',
             departureTime: '07:00:00',
             arrivalTime: '11:00:00',
           ),
@@ -216,4 +252,3 @@ class ApiService {
     ];
   }
 }
-

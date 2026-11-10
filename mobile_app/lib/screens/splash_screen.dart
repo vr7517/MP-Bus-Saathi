@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_service.dart';
-import 'home_screen.dart';
 import 'language_select_screen.dart';
+import 'main_navigation_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -55,7 +55,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (hasSelectedLang) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => HomeScreen(initialIsHindi: isHindi)),
+        MaterialPageRoute(builder: (_) => MainNavigationShell(initialHindi: isHindi)),
       );
     } else {
       Navigator.pushReplacement(

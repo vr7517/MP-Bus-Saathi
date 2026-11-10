@@ -34,8 +34,8 @@ class LiveBusStatus {
     var next = json['next_stop'] as Map<String, dynamic>?;
 
     return LiveBusStatus(
-      busId: json['bus_id'] as int,
-      busNumber: json['bus_number'] ?? '',
+      busId: (json['bus_id'] as num?)?.toInt() ?? 0,
+      busNumber: json['bus_number'] ?? json['registration_number'] ?? '',
       busType: json['bus_type'] ?? 'ordinary',
       operatorName: json['operator'] ?? '',
       gpsStatus: json['gps_status'] ?? 'unavailable',
@@ -45,7 +45,7 @@ class LiveBusStatus {
       longitude: loc != null ? (loc['longitude'] as num?)?.toDouble() : null,
       speedKmh: loc != null ? (loc['speed_kmh'] as num?)?.toDouble() ?? 0.0 : 0.0,
       heading: loc != null ? (loc['heading'] as num?)?.toDouble() ?? 0.0 : 0.0,
-      lastPingSecondsAgo: json['last_ping_seconds_ago'] as int?,
+      lastPingSecondsAgo: (json['last_ping_seconds_ago'] as num?)?.round(),
       nextStop: next != null ? NextStopInfo.fromJson(next) : null,
     );
   }
@@ -72,13 +72,16 @@ class NextStopInfo {
 
   factory NextStopInfo.fromJson(Map<String, dynamic> json) {
     return NextStopInfo(
-      stopId: json['stop_id'] as int,
+      stopId: (json['stop_id'] as num?)?.toInt() ?? 0,
       nameHi: json['name_hi'] ?? '',
       nameEn: json['name_en'] ?? '',
       district: json['district'] ?? '',
-      distanceKm: (json['distance_km'] as num).toDouble(),
-      etaMinutes: json['eta_minutes'] as int? ?? 0,
+      distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0.0,
+      etaMinutes: (json['eta_minutes'] as num?)?.round() ?? 0,
     );
   }
+
+  String displayName(bool isHindi) =>
+      isHindi ? (nameHi.isNotEmpty ? nameHi : nameEn) : (nameEn.isNotEmpty ? nameEn : nameHi);
 }
 

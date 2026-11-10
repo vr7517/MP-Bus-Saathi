@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mp_bus_saathi/main.dart';
 import 'package:mp_bus_saathi/screens/driver_mode_screen.dart';
 import 'package:mp_bus_saathi/screens/language_select_screen.dart';
+import 'package:mp_bus_saathi/screens/main_navigation_shell.dart';
 import 'package:mp_bus_saathi/screens/verification_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -71,5 +72,20 @@ void main() {
     expect(find.text('चालक / परिचालक मोड'), findsOneWidget);
     expect(find.text('⚪ ट्रैकिंग बंद'), findsOneWidget);
     expect(find.text('लाइव ट्रैकिंग शुरू करें (Start Live Tracking)'), findsOneWidget);
+  });
+
+  testWidgets('MainNavigationShell renders 5 bottom navigation tabs', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MainNavigationShell(initialHindi: true),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('होम'), findsOneWidget);
+    expect(find.text('खोजें'), findsOneWidget);
+    expect(find.text('लाइव मैप'), findsOneWidget);
+    expect(find.text('पसंदीदा'), findsOneWidget);
+    expect(find.text('प्रोफ़ाइल'), findsOneWidget);
   });
 }

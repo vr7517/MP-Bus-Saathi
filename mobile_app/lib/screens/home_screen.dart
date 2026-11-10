@@ -4,13 +4,19 @@ import '../core/offline_service.dart';
 import '../models/bus_stop.dart';
 import '../models/district.dart';
 import '../models/route_item.dart';
+import '../theme/app_theme.dart';
+import '../widgets/connecting_journey_card.dart';
+import '../widgets/route_card.dart';
 import 'driver_mode_screen.dart';
-import 'live_map_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool initialIsHindi;
 
-  const HomeScreen({super.key, this.initialIsHindi = true});
+  const HomeScreen({
+    super.key,
+    bool initialIsHindi = true,
+    bool? initialHindi,
+  }) : initialIsHindi = initialHindi ?? initialIsHindi;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -25,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   BusStop? _destinationStop;
   bool _isLoadingStops = true;
   bool _isSearching = false;
+  SearchResultContainer? _searchContainer;
   List<RouteSearchResult> _searchResults = [];
   String? _lastSyncTime;
 
@@ -53,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoadingStops = false;
       _lastSyncTime = syncTime;
 
-      // Default select Bhopal Nadra and Indore Sarwate for instant demo preview
+      // Default select Bhopal Nadra and Indore Sarwate for instant preview
       if (stops.isNotEmpty) {
         _sourceStop = stops.firstWhere((s) => s.id == 1, orElse: () => stops.first);
         _destinationStop = stops.firstWhere((s) => s.id == 7, orElse: () => stops.last);
@@ -86,11 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_sourceStop == null || _destinationStop == null) return;
 
     setState(() => _isSearching = true);
-    final results = await ApiService.searchRoutes(_sourceStop!.id, _destinationStop!.id);
+    final container = await ApiService.searchJourney(_sourceStop!.id, _destinationStop!.id);
 
     if (!mounted) return;
     setState(() {
-      _searchResults = results;
+      _searchContainer = container;
+      _searchResults = container.directRoutes;
       _isSearching = false;
     });
   }
@@ -107,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,13 +125,11 @@ class _HomeScreenState extends State<HomeScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
-              _isHindi ? 'ऑफलाइन फ्रेंडली बस ट्रैकिंग' : 'Offline-Friendly Bus Transit',
+              _isHindi ? 'हर गाँव, हर शहर — हर बस की जानकारी' : 'Public Bus Transit for Madhya Pradesh',
               style: const TextStyle(fontSize: 11, color: Color(0xFFC7D2FE)),
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF1E1B4B),
-        foregroundColor: Colors.white,
         actions: [
           // Driver / Conductor Mode Button
           IconButton(
@@ -150,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _isLoadingStops
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF4338CA)))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.brandIndigo))
           : RefreshIndicator(
               onRefresh: _performSearch,
               child: SingleChildScrollView(
@@ -169,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.offline_pin, color: Color(0xFF4338CA), size: 18),
+                          const Icon(Icons.offline_pin, color: AppColors.brandIndigo, size: 18),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -188,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (_districtsWithStops.isNotEmpty) ...[
                       Row(
                         children: [
-                          const Icon(Icons.location_city, size: 16, color: Color(0xFF4338CA)),
+                          const Icon(Icons.location_city, size: 16, color: AppColors.brandIndigo),
                           const SizedBox(width: 6),
                           Text(
                             _isHindi ? 'जिला चुनें (Filter District)' : 'Filter by District',
@@ -200,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               onTap: () => setState(() => _selectedDistrictFilter = null),
                               child: Text(
                                 _isHindi ? 'सभी देखें' : 'Show All',
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF4338CA), fontWeight: FontWeight.w600),
+                                style: const TextStyle(fontSize: 11, color: AppColors.brandIndigo, fontWeight: FontWeight.w600),
                               ),
                             ),
                         ],
@@ -216,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               onSelected: (val) {
                                 if (val) setState(() => _selectedDistrictFilter = null);
                               },
-                              selectedColor: const Color(0xFF4338CA),
+                              selectedColor: AppColors.brandIndigo,
                               labelStyle: TextStyle(
                                 color: _selectedDistrictFilter == null ? Colors.white : const Color(0xFF1E293B),
                                 fontWeight: FontWeight.w600,
@@ -243,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: const Color(0xFF4338CA),
+                                  selectedColor: AppColors.brandIndigo,
                                   labelStyle: TextStyle(
                                     color: isSelected ? Colors.white : const Color(0xFF1E293B),
                                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -264,9 +270,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.borderLight),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -297,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Center(
                             child: IconButton(
                               onPressed: _swapStops,
-                              icon: const Icon(Icons.swap_vert, color: Color(0xFF4338CA)),
+                              icon: const Icon(Icons.swap_vert, color: AppColors.brandIndigo),
                               style: IconButton.styleFrom(
                                 backgroundColor: const Color(0xFFEEF2FF),
                                 padding: const EdgeInsets.all(6),
@@ -335,26 +342,40 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Results List
-                    if (_searchResults.isEmpty && !_isSearching)
+                    // Direct Routes List
+                    if (_searchResults.isNotEmpty)
+                      ..._searchResults.map((r) => RouteCard(route: r, isHindi: _isHindi)),
+
+                    // Connecting 1-Transfer Routes List
+                    if (_searchContainer != null && _searchContainer!.transferRoutes.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _isHindi ? 'कनेक्टिंग बस सेवा (1-बदलाव यात्रा):' : 'Connecting Services (1-Transfer):',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.teal),
+                      ),
+                      const SizedBox(height: 8),
+                      ..._searchContainer!.transferRoutes.map((cj) => ConnectingJourneyCard(journey: cj, isHindi: _isHindi)),
+                    ],
+
+                    // Empty State
+                    if ((_searchContainer?.isEmpty ?? _searchResults.isEmpty) && !_isSearching)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderLight),
                         ),
                         child: Center(
                           child: Text(
                             _isHindi
-                                ? 'इस मार्ग पर कोई सीधी बस नहीं मिली।'
-                                : 'No direct buses found for this route.',
+                                ? 'इस मार्ग पर कोई सीधी या कनेक्टिंग बस नहीं मिली।'
+                                : 'No direct or connecting buses found for this route.',
                             style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
                           ),
                         ),
-                      )
-                    else
-                      ..._searchResults.map((r) => _buildRouteCard(r)),
+                      ),
                   ],
                 ),
               ),
@@ -380,13 +401,13 @@ class _HomeScreenState extends State<HomeScreen> {
           isExpanded: true,
           value: value,
           hint: Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
-          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF4338CA)),
+          icon: const Icon(Icons.arrow_drop_down, color: AppColors.brandIndigo),
           items: _displayedStops.map((s) {
             return DropdownMenuItem<BusStop>(
               value: s,
               child: Row(
                 children: [
-                  Icon(icon, size: 16, color: const Color(0xFF4338CA)),
+                  Icon(icon, size: 16, color: AppColors.brandIndigo),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -404,178 +425,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  Widget _buildRouteCard(RouteSearchResult route) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Route Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1B4B),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          route.routeCode,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          '${route.travelDistanceKm} km • ~${route.estimatedDurationMinutes} ${_isHindi ? 'मिनट' : 'mins'}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '${route.stopsInSegment} ${_isHindi ? 'स्टॉप' : 'stops'}',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                ),
-              ],
-            ),
-          ),
-
-          // Schedules inside Route
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: route.schedules.length,
-            separatorBuilder: (_, _) => const Divider(height: 1, indent: 16, endIndent: 16),
-            itemBuilder: (context, idx) {
-              final s = route.schedules[idx];
-              final bool isLive = s.isGpsLive;
-
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Departure & Arrival Time Box
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          s.departureTime.length >= 5 ? s.departureTime.substring(0, 5) : s.departureTime,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF0F172A)),
-                        ),
-                        Text(
-                          '${_isHindi ? 'आगमन' : 'Arrival'}: ${s.arrivalTime.length >= 5 ? s.arrivalTime.substring(0, 5) : s.arrivalTime}',
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Operator & Status
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            s.busNumber,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
-                          ),
-                          Text(
-                            '${s.operatorName} • ${s.busType.toUpperCase()}',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-
-                          // GPS Live vs GPS Unavailable Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isLive ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isLive ? const Color(0xFF059669) : const Color(0xFFD97706),
-                                  ),
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  isLive ? 'GPS Live' : 'GPS Unavailable',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: isLive ? const Color(0xFF065F46) : const Color(0xFF92400E),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Live Track Button
-                    IconButton.filled(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LiveMapScreen(
-                              busId: s.busId ?? 1,
-                              busNumber: s.busNumber,
-                              scheduleId: s.scheduleId,
-                              isHindi: _isHindi,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.map, size: 20),
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFF4338CA),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
 }
-
